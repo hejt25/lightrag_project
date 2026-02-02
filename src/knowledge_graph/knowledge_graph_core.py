@@ -195,6 +195,9 @@ class KnowledgeGraph:
     def from_dict(cls, data: Dict[str, Any]) -> "KnowledgeGraph":
         graph = cls(name=data.get("name", "default"))
         for entity_data in data.get("entities", {}).values():
+            # Map 'type' to 'entity_type' for compatibility
+            if "type" in entity_data and "entity_type" not in entity_data:
+                entity_data["entity_type"] = entity_data.pop("type")
             graph.add_entity(Entity(**entity_data))
         for rel_data in data.get("relations", []):
             graph.add_relation(Relation(**rel_data))

@@ -12,8 +12,15 @@ from .retrieval import RetrievalPipeline, VectorRetriever, HybridRetriever
 from .generation import GenerationPipeline, PromptBuilder
 from .monitoring import Monitor, TraceContext, MetricsCollector
 from .pipeline import LightRAGPipeline, EasyLightRAG
+from .query_rewrite import (
+    InsuranceQueryRewriter,
+    RewriteResult,
+    UserProfile,
+    ConversationHistoryManager,
+    UserBehaviorTracker
+)
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 __all__ = [
     "LightRAGConfig",
@@ -33,5 +40,11 @@ __all__ = [
     "TraceContext",
     "MetricsCollector",
     "LightRAGPipeline",
-    "EasyLightRAG"
+    "EasyLightRAG",
+    # Query Rewrite
+    "InsuranceQueryRewriter",
+    "RewriteResult",
+    "UserProfile",
+    "ConversationHistoryManager",
+    "UserBehaviorTracker"
 ]

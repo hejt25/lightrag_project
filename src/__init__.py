@@ -9,7 +9,7 @@ from .ingestion import DataIngestionPipeline, Document
 from .embedding import EmbeddingPipeline, SentenceTransformerEmbedder
 from .storage import VectorStoreManager, FAISSVectorStore
 from .retrieval import RetrievalPipeline, VectorRetriever, HybridRetriever
-from .generation import GenerationPipeline, PromptBuilder
+from .generation import GenerationPipeline, LegacyPromptBuilder, NewPromptPipeline
 from .monitoring import Monitor, TraceContext, MetricsCollector
 from .pipeline import LightRAGPipeline, EasyLightRAG
 from .query_rewrite import (
@@ -35,7 +35,8 @@ __all__ = [
     "VectorRetriever",
     "HybridRetriever",
     "GenerationPipeline",
-    "PromptBuilder",
+    "LegacyPromptBuilder",
+    "NewPromptPipeline",
     "Monitor",
     "TraceContext",
     "MetricsCollector",

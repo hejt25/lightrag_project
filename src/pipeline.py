@@ -14,7 +14,7 @@ from .ingestion import DataIngestionPipeline, Document
 from .embedding import EmbeddingPipeline, SentenceTransformerEmbedder
 from .storage import VectorStoreManager, FAISSVectorStore
 from .retrieval import RetrievalPipeline
-from .generation import GenerationPipeline, LocalLLM, PromptBuilder
+from .generation import GenerationPipeline, LocalLLM, LegacyPromptBuilder
 from .monitoring import Monitor, PerformanceMonitor
 
 logger = logging.getLogger(__name__)

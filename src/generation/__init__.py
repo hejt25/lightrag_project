@@ -2,6 +2,10 @@
 Generation Module
 =================
 生成模块 - 负责基于检索结果生成回答
+
+支持两种Prompt模式：
+1. LegacyPromptBuilder - 原有简单模式
+2. NewPromptPipeline - 新版专业Prompt模板系统
 """
 
 from typing import List, Dict, Any, Optional
@@ -94,8 +98,8 @@ class LocalLLM(BaseLLM):
         )
 
 
-class PromptBuilder:
-    """提示词构建器"""
+class LegacyPromptBuilder:
+    """提示词构建器 - 原有简单模式（向后兼容）"""
 
     def __init__(self, system_prompt: Optional[str] = None):
         self.system_prompt = system_prompt or self._default_system_prompt()
@@ -120,9 +124,7 @@ class PromptBuilder:
     def build_prompt(self, question: str, contexts: List[str]) -> str:
         """构建完整提示词"""
         context_text = "\n\n".join([f"[来源{i+1}] {ctx}" for i, ctx in enumerate(contexts)])
-
         prompt = self.system_prompt.format(context=context_text, question=question)
-
         return prompt
 
     def build_rag_prompt(self, question: str, contexts: List[Dict[str, Any]]) -> str:
@@ -131,35 +133,79 @@ class PromptBuilder:
             f"[来源{i+1}] (相关度:{ctx.get('score', 0):.3f})\n{ctx.get('content', '')}"
             for i, ctx in enumerate(contexts)
         ])
-
         prompt = self.system_prompt.format(context=context_text, question=question)
-
         return prompt
 
 
-class GenerationPipeline:
-    """生成管道"""
+class NewPromptPipeline:
+    """
+    新版专业Prompt管道
+
+    使用新的Prompt模板系统，支持：
+    - 多种预定义模板（通用、保险领域）
+    - 模板版本管理
+    - A/B测试
+    - 动态组件组合
+    """
 
     def __init__(
         self,
         llm: BaseLLM,
-        prompt_builder: Optional[PromptBuilder] = None,
+        template_name: str = "GeneralRAGPrompt",
         max_tokens: int = 2048,
         temperature: float = 0.7
     ):
         self.llm = llm
-        self.prompt_builder = prompt_builder or PromptBuilder()
         self.max_tokens = max_tokens
         self.temperature = temperature
 
-    def generate(self, question: str, contexts: List[Dict[str, Any]]) -> GenerationResult:
+        from src.prompt_templates import (
+            PromptBuilder,
+            GeneralRAGPrompt,
+            InsuranceProductPrompt,
+            InsuranceClaimPrompt,
+            InsuranceComparisonPrompt,
+            InsuranceRecommendationPrompt,
+            ConversationalPrompt
+        )
+
+        self.builder = PromptBuilder()
+        self.templates = {
+            "GeneralRAGPrompt": GeneralRAGPrompt,
+            "InsuranceProductPrompt": InsuranceProductPrompt,
+            "InsuranceClaimPrompt": InsuranceClaimPrompt,
+            "InsuranceComparisonPrompt": InsuranceComparisonPrompt,
+            "InsuranceRecommendationPrompt": InsuranceRecommendationPrompt,
+            "ConversationalPrompt": ConversationalPrompt,
+        }
+
+        if template_name in self.templates:
+            self.builder.register_template(self.templates[template_name](), set_default=True)
+            self.current_template_name = template_name
+        else:
+            self.builder.register_template(GeneralRAGPrompt(), set_default=True)
+            self.current_template_name = "GeneralRAGPrompt"
+
+    def generate(
+        self,
+        question: str,
+        contexts: List[Dict[str, Any]],
+        template_name: Optional[str] = None
+    ) -> GenerationResult:
         """基于上下文生成回答"""
-        # 构建提示词
-        prompt = self.prompt_builder.build_rag_prompt(question, contexts)
+        context_text = "\n\n".join([
+            f"[来源{i+1}] (相关度:{ctx.get('score', 0):.3f})\n{ctx.get('content', '')}"
+            for i, ctx in enumerate(contexts)
+        ])
 
-        logger.info(f"Generated prompt with {len(prompt)} characters")
+        if template_name and template_name in self.templates:
+            self.builder.register_template(self.templates[template_name]())
 
-        # 调用LLM
+        rendered = self.builder.build(context_text, question)
+        prompt = rendered.full_prompt
+
+        logger.info(f"Generated prompt with {len(prompt)} characters (template: {rendered.template_used})")
+
         result = self.llm.generate(
             prompt=prompt,
             max_tokens=self.max_tokens,
@@ -167,28 +213,114 @@ class GenerationPipeline:
         )
 
         result.context_used = [ctx.get("id", "") for ctx in contexts]
+        return result
 
+    def generate_with_history(
+        self,
+        question: str,
+        contexts: List[Dict[str, Any]],
+        history: List[Dict[str, str]],
+        template_name: str = "ConversationalPrompt"
+    ) -> GenerationResult:
+        """基于历史对话生成回答"""
+        if template_name in self.templates:
+            self.builder.register_template(self.templates[template_name]())
+
+        context_text = "\n\n".join([
+            f"[来源{i+1}] {ctx.get('content', '')}"
+            for i, ctx in enumerate(contexts)
+        ])
+
+        rendered = self.builder.build(context_text, question, history=history)
+
+        messages = [{"role": "user", "content": rendered.full_prompt}]
+
+        try:
+            response = self.llm.client.chat.completions.create(
+                model=self.llm.model,
+                messages=messages,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature
+            )
+
+            result = GenerationResult(
+                answer=response.choices[0].message.content,
+                context_used=[ctx.get("id", "") for ctx in contexts],
+                prompt_tokens=response.usage.prompt_tokens,
+                completion_tokens=response.usage.completion_tokens,
+                total_tokens=response.usage.total_tokens,
+                model_name=self.llm.model
+            )
+        except Exception as e:
+            logger.error(f"Generation failed: {e}")
+            result = GenerationResult(
+                answer=f"生成失败: {str(e)}",
+                context_used=[],
+                prompt_tokens=0,
+                completion_tokens=0,
+                total_tokens=0,
+                model_name=self.llm.model
+            )
+
+        return result
+
+    def get_template_info(self) -> Dict[str, Any]:
+        """获取当前模板信息"""
+        return {
+            "current_template_name": self.current_template_name,
+            "available_templates": list(self.templates.keys())
+        }
+
+
+class GenerationPipeline(NewPromptPipeline):
+    """生成管道 - 兼容旧接口"""
+
+    def __init__(
+        self,
+        llm: BaseLLM,
+        prompt_builder: Optional[LegacyPromptBuilder] = None,
+        use_new_pipeline: bool = False,
+        template_name: str = "GeneralRAGPrompt",
+        max_tokens: int = 2048,
+        temperature: float = 0.7
+    ):
+        if use_new_pipeline:
+            super().__init__(llm, template_name, max_tokens, temperature)
+            self.legacy_builder = None
+        else:
+            self.llm = llm
+            self.legacy_builder = prompt_builder or LegacyPromptBuilder()
+            self.max_tokens = max_tokens
+            self.temperature = temperature
+            self.use_new_pipeline = False
+
+    def generate(self, question: str, contexts: List[Dict[str, Any]]) -> GenerationResult:
+        """基于上下文生成回答"""
+        if self.use_new_pipeline:
+            return super().generate(question, contexts)
+
+        prompt = self.legacy_builder.build_rag_prompt(question, contexts)
+        logger.info(f"Generated prompt with {len(prompt)} characters")
+
+        result = self.llm.generate(
+            prompt=prompt,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature
+        )
+
+        result.context_used = [ctx.get("id", "") for ctx in contexts]
         return result
 
     def generate_with_history(self, question: str, contexts: List[Dict[str, Any]], history: List[Dict[str, str]]) -> GenerationResult:
         """基于历史对话生成回答"""
-        # 构建带历史的提示词
         context_text = "\n\n".join([f"[来源{i+1}] {ctx.get('content', '')}" for i, ctx in enumerate(contexts)])
 
         messages = []
-
-        # 添加系统提示词
-        messages.append({"role": "system", "content": self.prompt_builder.system_prompt.format(context=context_text, question="")})
-
-        # 添加历史对话
+        messages.append({"role": "system", "content": self.legacy_builder.system_prompt.format(context=context_text, question="")})
         messages.extend(history)
-
-        # 添加当前问题
         messages.append({"role": "user", "content": question})
 
-        # 调用LLM
         try:
-            import openai
             response = self.llm.client.chat.completions.create(
                 model=self.llm.model,
                 messages=messages,

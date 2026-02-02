@@ -19,8 +19,20 @@ from .query_rewrite import (
     ConversationHistoryManager,
     UserBehaviorTracker
 )
+from .knowledge_graph import (
+    KnowledgeGraph,
+    Entity,
+    Relation,
+    Triplet,
+    EntityExtractor,
+    RelationExtractor,
+    GraphBuilder,
+    GraphRetriever,
+    HybridGraphRetriever,
+    GraphEnhancedRAG
+)
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 __all__ = [
     "LightRAGConfig",
@@ -47,5 +59,16 @@ __all__ = [
     "RewriteResult",
     "UserProfile",
     "ConversationHistoryManager",
-    "UserBehaviorTracker"
+    "UserBehaviorTracker",
+    # Knowledge Graph
+    "KnowledgeGraph",
+    "Entity",
+    "Relation",
+    "Triplet",
+    "EntityExtractor",
+    "RelationExtractor",
+    "GraphBuilder",
+    "GraphRetriever",
+    "HybridGraphRetriever",
+    "GraphEnhancedRAG"
 ]

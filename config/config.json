@@ -1,0 +1,33 @@
+{
+  "project_name": "LightRAG",
+  "version": "1.0.0",
+  "data_path": "./data/raw",
+  "output_path": "./data/output",
+  "retrieval_top_k": 5,
+  "context_window": 8192,
+  "chunk_size": 512,
+  "chunk_overlap": 50,
+  "embedding": {
+    "model_name": "BAAI/bge-small-zh",
+    "device": "cpu",
+    "batch_size": 32,
+    "max_length": 512
+  },
+  "vector_store": {
+    "storage_type": "faiss",
+    "index_path": "./data/vector_store",
+    "dimension": 512,
+    "metric": "cosine"
+  },
+  "llm": {
+    "model_name": "Qwen/Qwen2.5-7B-Instruct",
+    "api_base": "http://localhost:8000/v1",
+    "max_tokens": 2048,
+    "temperature": 0.7
+  },
+  "monitoring": {
+    "enable_tracing": true,
+    "enable_metrics": true,
+    "log_level": "INFO"
+  }
+}

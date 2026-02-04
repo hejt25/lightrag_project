@@ -1,0 +1,7 @@
+LightRAG 是一个 RAG (Retrieval-Augmented Generation) 框架。
+它使用 Large Language Model (LLM) 来增强 Retrieval 的效果。
+主要特性包括：Installation、Configuration、Usage。
+支持 Vector Store、Embedding、Retrieval、Generation 等功能。
+Installation 非常简单，只需几行命令即可完成。
+Configuration 支持多种模型，包括 OpenAI、Local LLM。
+Usage 通过简单的 API 调用即可完成索引和查询。

@@ -1,0 +1,36 @@
+```python
+def hello_world():
+    """A simple function to print hello."""
+    print("Hello, World!")
+    return True
+
+class Calculator:
+    """A simple calculator class."""
+
+    def __init__(self, initial=0):
+        self.value = initial
+
+    def add(self, x):
+        """Add x to the current value."""
+        self.value += x
+        return self
+
+    def subtract(self, x):
+        """Subtract x from the current value."""
+        self.value -= x
+        return self
+
+    def multiply(self, x):
+        """Multiply current value by x."""
+        self.value *= x
+        return self
+```
+
+```javascript
+function greet(name) {
+    return `Hello, ${name}!`;
+}
+
+const numbers = [1, 2, 3, 4, 5];
+const doubled = numbers.map(n => n * 2);
+```

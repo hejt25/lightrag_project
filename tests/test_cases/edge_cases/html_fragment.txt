@@ -1,0 +1,14 @@
+<html>
+<body>
+    <h1>HTML Test Document</h1>
+    <p>This is a <strong>bold</strong> paragraph with <em>emphasis</em>.</p>
+    <ul>
+        <li>First item</li>
+        <li>Second item</li>
+    </ul>
+    <a href="https://example.com">Link</a>
+    <div class="container">
+        <span>Inner content</span>
+    </div>
+</body>
+</html>
